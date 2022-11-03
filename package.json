@@ -1,6 +1,6 @@
 {
   "name": "@analytics-debugger/google-tag-linker",
-  "version": "0.0.1-beta",
+  "version": "0.0.1",
   "description": "Generate a cross-domain linker parameter for Google Tags ( ie: Google Analytics 4 )",
   "main": "dist/googleTagLinker.min.js",
   "module": "dist/dist/googleTagLinker.esm.min.js",
