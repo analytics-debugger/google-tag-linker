@@ -1,8 +1,8 @@
 # Google Tag Linker Brigde
 
-Hola! This is a **JavaScript** library that provided the needed functionality for creating a linkParam for Google analytics 4 ( ***`Google Tag`*** , ***`GTAG`*** ) . I started this work back in 2019 when I first saw the new `_gl` parameter.
+Hola! This is a **JavaScript** library that provided the needed functionality for creating a `linkParam` for **`Google Analytics 4`** ( ***`Google Tag`*** , ***`GTAG`*** ) . I started this work back in 2019 when I first saw the new `_gl` parameter.
 
-At the time of publishing this library Google doesn't offer any "documented" way of generating this value, making really hard to work with custom implementations, for example when needing to deal with iFrames or forms/links generated dynamically. 
+At the time of publishing this library **Google** doesn't offer any "*documented*" way of generating this value, making really hard to work with custom implementations, for example when needing to deal with iFrames or forms/links generated dynamically. 
 
 The library is provided in the `AMD`, `UMD`, `IIFE` and `ESM` formats, all of them available in the `dist` folder
 
@@ -30,9 +30,9 @@ The Linker Paramter will look like this:
    
 Which follows the following definition
     
-    {{FIXED_NUMBER}}*{{FINGERPRINT_HASH}}*[COOKIE_KEY*COOKIE_VALUE]^n
+    {{FIXED_NUMBER}}*{{FINGERPRINT_HASH}}*[{{COOKIE_KEY}}*{{COOKIE_VALUE}}]^n
 
-Note that Google Tag allow allows to do an AdWords / DoubleClick cookies. Which are not currently supported by this tool, yet ...
+Note that Google Tag allow allows to do an AdWords / DoubleClick cookies, which are not currently covered by this tool, yet ...
 
 This tool will read and pass the following cookies by default:
 
