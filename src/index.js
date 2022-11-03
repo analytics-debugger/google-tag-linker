@@ -18,7 +18,8 @@ function getCookies() {
     ];
     let _FPLC = undefined;
     ('; ' + document.cookie).split('; ').forEach(function(ck) {
-        let [name, value] = ck.split("=");
+        let name = ck.split("=")[0];
+        let value = ck.split("=")[1];
         
         for (const regex of cookiesList) {
             if (regex.test(name)) {
