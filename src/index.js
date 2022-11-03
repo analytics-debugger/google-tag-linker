@@ -32,8 +32,6 @@ function getCookies() {
                 } else {
                     if(name.match(/^_ga/)) {
                         value = value.match(/G[A-Z]1\.[0-9]\.(.+)/)[1]
-                        console.log(name, value)
-
                         cookies.push([name, btoa(value).replace(/=/g, '.')].join('*'))
                     }                    
                 }                               
