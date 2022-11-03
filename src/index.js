@@ -1,4 +1,8 @@
 const googleTagLinker = function(action = "get", settings = {}) {    
+    // Check if we are on a browser
+    if(typeof window === "undefined" || typeof window.document === "undefined"){
+        throw 'This should be only run on a browser'
+    }
     // Grab current GA4 Related cookies
     const cookies = getCookies();    
     if(action === 'get'){
