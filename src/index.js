@@ -20,8 +20,7 @@ function getCookies() {
     ('; ' + document.cookie).split('; ').forEach(function(ck) {
         let name = ck.split("=")[0];
         let value = ck.split("=")[1];
-        
-        for (const regex of cookiesList) {
+        cookiesList.forEach(regex => {
             if (regex.test(name)) {
                 // This needs to go at the end
                 if(name === "FPLC") {
@@ -35,8 +34,7 @@ function getCookies() {
                     }                    
                 }                               
             }
-        }
-        
+        })
     });
     if(_FPLC) cookies.push(_FPLC)
     return cookies;
