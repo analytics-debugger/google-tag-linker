@@ -65,4 +65,16 @@ Cross Domain has not been properly checked when there're multiple GA4 Session co
 # How to use
 After loading the script just run the following. 
 
+Using Import:
+
+
+    import googleTagLinker from '@analytics-debugger/google-tag-linker'
     const linkerParam  = googleTagLinker("get");
+
+or loading the IIFE version:
+
+    <script src="https://cdn.jsdelivr.net/npm/@analytics-debugger/google-tag-linker@latest/dist/googleTagLinker.iife.min.js"><script>
+    <script>
+    const linkerParam  = googleTagLinker("get");
+    </script>
+
