@@ -1,6 +1,6 @@
 {
   "name": "@analytics-debugger/google-tag-linker",
-  "version": "0.0.1-beta",
+  "version": "0.0.1",
   "description": "Generate a cross-domain linker parameter for Google Tags ( ie: Google Analytics 4 )",
   "main": "dist/googleTagLinker.min.js",
   "module": "dist/dist/googleTagLinker.esm.min.js",
@@ -54,6 +54,7 @@
     "@babel/plugin-transform-object-assign": "^7.18.6",
     "@babel/preset-env": "^7.19.4",
     "@rollup/plugin-node-resolve": "^15.0.1",
+    "browser-or-node": "^2.0.0",
     "rollup": "^2.79.1",
     "rollup-plugin-babel": "^4.4.0",
     "rollup-plugin-license": "^3.0.1",

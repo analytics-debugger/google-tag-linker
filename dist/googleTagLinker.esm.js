@@ -1,4 +1,9 @@
 const googleTagLinker = function(action = "get", settings = {}) {    
+    // Check if we are on a browser
+    if(typeof window === "undefined" || typeof window.document === "undefined"){
+        throw 'This should be only run on a browser'
+    }
+    // Grab current GA4 Related cookies
     const cookies = getCookies();    
     if(action === 'get'){
         return ["1", getFingerPrint(cookies), cookies.join('*')].join('*');
@@ -17,9 +22,9 @@ function getCookies() {
     ];
     let _FPLC = undefined;
     ('; ' + document.cookie).split('; ').forEach(function(ck) {
-        let [name, value] = ck.split("=");
-        
-        for (const regex of cookiesList) {
+        let name = ck.split("=")[0];
+        let value = ck.split("=")[1];
+        cookiesList.forEach(regex => {
             if (regex.test(name)) {
                 // This needs to go at the end
                 if(name === "FPLC") {
@@ -33,8 +38,7 @@ function getCookies() {
                     }                    
                 }                               
             }
-        }
-        
+        });
     });
     if(_FPLC) cookies.push(_FPLC);
     return cookies;
