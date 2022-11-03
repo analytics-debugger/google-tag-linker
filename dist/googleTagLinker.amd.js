@@ -1,6 +1,6 @@
 /*!
 * 
-*   @analytics-debugger/google-tag-linker 0.0.1-beta
+*   @analytics-debugger/google-tag-linker 0.0.1
 *   https://github.com/analytics-debugger/google-tag-linker
 *
 *   Copyright (c) David Vallejo (https://www.thyngster.com).
