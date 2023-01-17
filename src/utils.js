@@ -31,7 +31,7 @@ function getQueryParameterValue(parameterName) {
     // return searchParams.get(parameterName);
 }
 
-function getLinkerValuesFromUrl({
+export function getLinkerValuesFromUrl({
     linkerQueryParameterName,
     cookiesNamesList,
     checkFingerPrint
@@ -59,7 +59,7 @@ function getLinkerValuesFromUrl({
     return cookiesDecodedFromUrl;
 }
 
-function generateLinkerValuesFromCookies({ cookiesNamesList } = {}) {
+export function generateLinkerValuesFromCookies({ cookiesNamesList } = {}) {
     const cookiesValuesFormmatedForLinker = [];
     let _FPLC = undefined;
 
@@ -86,7 +86,7 @@ function generateLinkerValuesFromCookies({ cookiesNamesList } = {}) {
     return cookiesValuesFormmatedForLinker;
 }
 
-function decorateAnchorTagWithLinker(
+export function decorateAnchorTagWithLinker(
     linkerQueryParameter,
     linkerParameter,
     anchorElement,
@@ -103,7 +103,7 @@ function decorateAnchorTagWithLinker(
     }
 }
 
-function decorateFormTagWithLinker(linkerQueryParameter, linkerParameter, formElement) {
+export function decorateFormTagWithLinker(linkerQueryParameter, linkerParameter, formElement) {
     if (formElement && formElement.action) {
         const method = (formElement.method || "").toLowerCase();
         if ("get" === method) {
@@ -134,7 +134,7 @@ function decorateFormTagWithLinker(linkerQueryParameter, linkerParameter, formEl
     }
 }
 
-function decorateURLWithLinker(linkerQueryParameter, linkerParameter, url, useFragment) {
+export function decorateURLWithLinker(linkerQueryParameter, linkerParameter, url, useFragment) {
     function Q(a) {
         return new RegExp("(.*?)(^|&)" + a + "=([^&]*)&?(.*)");
     }
@@ -170,7 +170,7 @@ function decorateURLWithLinker(linkerQueryParameter, linkerParameter, url, useFr
 }
 
 // linkerCookiesValues argument is an array in the following format ['<cookie name 1>*<cookie value transformed 1>', ...]
-function getFingerPrint(linkerCookiesValues = undefined) {
+export function getFingerPrint(linkerCookiesValues = undefined) {
     // Build Finger Print String
     const fingerPrintString = [
         window.navigator.userAgent,
@@ -199,134 +199,3 @@ function getFingerPrint(linkerCookiesValues = undefined) {
     crc = ((crc ^ -1) >>> 0).toString(36);
     return crc;
 }
-
-function getLinker({ cookiesNamesList } = {}) {
-    // Grab current GA4 and Google Ads / Campaign Manager Related cookies
-    const linkerCookiesValues = generateLinkerValuesFromCookies({
-        cookiesNamesList
-    });
-
-    return ["1", getFingerPrint(linkerCookiesValues), linkerCookiesValues.join("*")].join("*");
-}
-
-function readLinker({ linkerQueryParameterName, cookiesNamesList, checkFingerPrint } = {}) {
-    return getLinkerValuesFromUrl({
-        linkerQueryParameterName,
-        cookiesNamesList,
-        checkFingerPrint
-    });
-}
-
-function decorateWithLinker({
-    linkerQueryParameterName,
-    cookiesNamesList,
-    entity,
-    useFragment
-} = {}) {
-    const linkerParameter = getLinker({
-        cookiesNamesList
-    });
-
-    if (entity.tagName) {
-        if ("A" === entity.tagName)
-            return decorateAnchorTagWithLinker(
-                linkerQueryParameterName,
-                linkerParameter,
-                entity,
-                useFragment
-            );
-        if ("FORM" === entity.tagName)
-            return decorateFormTagWithLinker(linkerQueryParameterName, linkerParameter, entity);
-    }
-
-    if ("string" === typeof entity)
-        return decorateURLWithLinker(
-            linkerQueryParameterName,
-            linkerParameter,
-            entity,
-            useFragment
-        );
-}
-
-/*
-
-[x] Add Adwords / Double Click Support
-    [x] Confirmar quais são os cookies usados para esse caso.
-        '_gcl_aw', '_gcl_dc', '_gcl_gf', '_gcl_ha', '_gcl_gb'
-    [x] Colocar opção para pessoa escolher o prefixo do cookie (do GA e Conversion Linker). Alterar assinatura de getCookies.
-
-[x] QA environments with multiple cookies
-    [x] Ler somente o último cookie de document.cookies, pois será sempre o mais atualizado.
-       O  código original pega sempre o último cookie.
-
-[x] Add the chance to manually defined the cookies to be passed. Alterar assinatura de getCookies.
-    [x] Se não passar nada, pega os default que o GA4 usa (_ga e _ga_<stream> e FPLC)
-
-[x] Add a "read" method to decode the linkerParam to the real cookie values
-    [x] Checar se fingerprint bate.
-    [x] Se bater, pegar cada query e fazer atob(query.replace(/\./g, '='))
-
-[x] Add a "decorate" method
-    Usar a mesma ideia de window.google_tag_data.glBridge.decorate(generateArgumentObject, element);
-    Checar no código o que é que fazem para cada caso.
-    [x] Se for string, decora a string e retorna.
-    [x] Se for HTMLAnchorElement ou HTMLFormElement, decora os atributos que contém o link e retorna (o próprio elemento ou a string. Checar.)
-
-
-[x] Renomear getCookies e as variáveis que capturam o retorno. Alterar o nome do argumento de getFingerprint.
-
-
-[x] Gerenciar argumentos default.
-
-[] Testar "decorate".
-
-[] Enviar para o Chat GPT
-    [] Pedir para arrumar o readme.
-    [] Solicitar que documente apenas 2 funções por vez. Assim dará para pegar todas.
-    [] Pedir para gerar testes.
-
-*/
-
-const googleTagLinker = function (action = "get", settings = {}) {
-    // Check if we are on a browser
-    if (typeof window === "undefined" || typeof window.document === "undefined") {
-        throw "This should be only run on a browser";
-    }
-
-    ({
-        gaCookiesPrefix: settings.gaCookiesPrefix || undefined,
-        conversionLinkerCookiesPrefix: settings.conversionLinkerCookiesPrefix || "_gcl",
-        linkerQueryParameterName: settings.linkerQueryParameterName || "_gl",
-        checkFingerPrint: settings.checkFingerPrint || false,
-        useFragment: settings.useFragment || false
-    });
-
-    if (settings.cookiesNamesList) {
-        settings.cookiesNamesList;
-    }
-
-    switch (action) {
-        case "get":
-            return getLinker({
-                cookiesNamesList: settings.cookiesNamesList
-            });
-        case "read":
-            return readLinker({
-                linkerQueryParameterName: settings.linkerQueryParameterName,
-                cookiesNamesList: settings.cookiesNamesList,
-                checkFingerPrint: settings.checkFingerPrint
-            });
-        case "decorate":
-            return decorateWithLinker({
-                linkerQueryParameterName: settings.linkerQueryParameterName,
-                cookiesNamesList: settings.cookiesNamesList,
-                entity: settings.entity,
-                useFragment: settings.useFragment
-            });
-    }
-};
-
-googleTagLinker.prototype = {};
-googleTagLinker.answer = 42;
-
-export { googleTagLinker as default };

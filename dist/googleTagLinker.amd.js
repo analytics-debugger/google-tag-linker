@@ -38,6 +38,9 @@ define((function () { 'use strict';
       return _arr;
     }
   }
+  function _readOnlyError(name) {
+    throw new TypeError("\"" + name + "\" is read-only");
+  }
   function _slicedToArray(arr, i) {
     return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
   }
@@ -73,68 +76,7 @@ define((function () { 'use strict';
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
-  /*
-
-  [x] Add Adwords / Double Click Support
-      [x] Confirmar quais são os cookies usados para esse caso.
-          '_gcl_aw', '_gcl_dc', '_gcl_gf', '_gcl_ha', '_gcl_gb'
-      [x] Colocar opção para pessoa escolher o prefixo do cookie (do GA e Conversion Linker). Alterar assinatura de getCookies.
-
-  [x] QA environments with multiple cookies
-      [] Ler somente o último cookie de document.cookies, pois será sempre o mais atualizado.
-         O  código original pega sempre o último cookie.
-
-  [x] Add the chance to manually defined the cookies to be passed. Alterar assinatura de getCookies.
-      [x] Se não passar nada, pega os default que o GA4 usa (_ga e _ga_<stream> e FPLC)
-
-  [x] Add a "read" method to decode the linkerParam to the real cookie values
-      [x] Checar se fingerprint bate.
-      [x] Se bater, pegar cada query e fazer atob(query.replace(/\./g, '='))
-
-  [] Add a "decorate" method
-      Usar a mesma ideia de window.google_tag_data.glBridge.decorate(generateArgumentObject, element);
-      Checar no código o que é que fazem para cada caso.
-      [] Se for string, decora a string e retorna.
-      [] Se for HTMLAnchorElement ou HTMLFormElement, decora os atributos que contém o link e retorna (o próprio elemento ou a string. Checar.)
-
-
-  [] Renomear getCookies e as variáveis que capturam o retorno. Alterar o nome do argumento de getFingerprint.
-
-  */
-
-  var googleTagLinker = function googleTagLinker() {
-    var action = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "get";
-    var settings = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {
-      conversionLinkerCookiesPrefix: "_gcl",
-      gaCookiesPrefix: "",
-      linkerQueryParameterName: "_gl",
-      checkFingerPrint: false
-    };
-    // Check if we are on a browser
-    if (typeof window === "undefined" || typeof window.document === "undefined") {
-      throw "This should be only run on a browser";
-    }
-    switch (action) {
-      case "get":
-        return getLinker({
-          gaCookiesPrefix: settings.gaCookiesPrefix,
-          conversionLinkerCookiesPrefix: settings.conversionLinkerCookiesPrefix,
-          cookiesNamesList: settings.cookiesNamesList
-        });
-      case "read":
-        return readLinker({
-          gaCookiesPrefix: settings.gaCookiesPrefix,
-          conversionLinkerCookiesPrefix: settings.conversionLinkerCookiesPrefix,
-          linkerQueryParameterName: settings.linkerQueryParameterName,
-          cookiesNamesList: settings.cookiesNamesList,
-          checkFingerPrint: settings.checkFingerPrint
-        });
-      case "decorate":
-        return decorateWithLinker();
-    }
-  };
-  googleTagLinker.prototype = {};
-  googleTagLinker.answer = 42;
+  var urlChecker = /^(?:(?:https?|mailto|ftp):|[^:/?#]*(?:[/?#]|$))/i;
   function getCookieNameAndValue(cookieName) {
     var cookiesNamesAndValues = ("; " + document.cookie).split("; ");
     for (var i = cookiesNamesAndValues.length - 1; i >= 0; i--) {
@@ -150,21 +92,44 @@ define((function () { 'use strict';
   function untransformCookieValueFromLinkerFormat(cookieValue) {
     return window.atob(cookieValue.replace(/\./g, "="));
   }
-  function getCookies() {
-    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-      gaCookiesPrefix = _ref.gaCookiesPrefix,
-      conversionLinkerCookiesPrefix = _ref.conversionLinkerCookiesPrefix,
-      cookiesNamesList = _ref.cookiesNamesList;
-    cookiesNamesList = cookiesNamesList || [gaCookiesPrefix + "_ga",
-    // Main Google Analytics Cookie
-    new RegExp("^" + gaCookiesPrefix + "_ga_[A-Z,0-9]")].concat(_toConsumableArray(["_aw", "_dc", "_gb", "_gf", "_ha"].map(function (name) {
-      return conversionLinkerCookiesPrefix + name;
-    })), [
-    // Google Ads (gclid, gclsrc -> _aw, _dc, _gf, _ha), Campaign Manager (dclid, gclsrc -> _aw, _dc, _gf, _ha), wbraid (wbraid -> _gb) cookies
-    "FPLC" // First Party Linker Cookie > sGTM
-    ]);
+  function getQueryParameterValue(parameterName) {
+    var url = window.location.href;
+    var reg = new RegExp("[?&]" + parameterName + "=([^&#]*)", "i");
+    var result = reg.exec(url);
+    return result === null ? null : decodeURIComponent(result[1]);
+    // const searchParams = new URLSearchParams(url);
+    // return searchParams.get(parameterName);
+  }
 
-    var cookiesFormmatedForLinker = [];
+  function getLinkerValuesFromUrl() {
+    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      linkerQueryParameterName = _ref.linkerQueryParameterName,
+      cookiesNamesList = _ref.cookiesNamesList,
+      checkFingerPrint = _ref.checkFingerPrint;
+    var linkerParameterValue = getQueryParameterValue(linkerQueryParameterName);
+    if (!linkerParameterValue) return;
+    if (checkFingerPrint) {
+      var linkerFingerprint = linkerParameterValue.split("*")[1];
+      var linkerCookiesValues = generateLinkerValuesFromCookies({
+        cookiesNamesList: cookiesNamesList // Must be the same as the ones used to generate the Linker parameter
+      });
+
+      var currentFingerprint = getFingerPrint(linkerCookiesValues);
+      if (linkerFingerprint !== currentFingerprint) return;
+    }
+    var cookiesEncodedFromLinkerParameter = linkerParameterValue.split("*").slice(2);
+    var cookiesDecodedFromUrl = {};
+    for (var i = 0; i < cookiesEncodedFromLinkerParameter.length; i += 2) {
+      var cookieName = cookiesEncodedFromLinkerParameter[i];
+      var cookieValue = cookiesEncodedFromLinkerParameter[i + 1];
+      cookiesDecodedFromUrl[cookieName] = untransformCookieValueFromLinkerFormat(cookieValue);
+    }
+    return cookiesDecodedFromUrl;
+  }
+  function generateLinkerValuesFromCookies() {
+    var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      cookiesNamesList = _ref2.cookiesNamesList;
+    var cookiesValuesFormmatedForLinker = [];
     var _FPLC = undefined;
     cookiesNamesList.forEach(function (cookieName) {
       var cookieValue;
@@ -178,123 +143,82 @@ define((function () { 'use strict';
       } else if (cookieName === "FPLC") {
         _FPLC = cookieValue;
       }
-      cookiesFormmatedForLinker.push(transformCookieNameAndValueToLinkerFormat(cookieName, cookieValue));
+      cookiesValuesFormmatedForLinker.push(transformCookieNameAndValueToLinkerFormat(cookieName, cookieValue));
     });
 
     // This needs to go at the end
-    if (_FPLC) cookiesFormmatedForLinker.push(transformCookieNameAndValueToLinkerFormat("_fplc", _FPLC));
-    return cookiesFormmatedForLinker;
+    if (_FPLC) cookiesValuesFormmatedForLinker.push(transformCookieNameAndValueToLinkerFormat("_fplc", _FPLC));
+    return cookiesValuesFormmatedForLinker;
   }
-  function getLinker() {
-    var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-      gaCookiesPrefix = _ref2.gaCookiesPrefix,
-      conversionLinkerCookiesPrefix = _ref2.conversionLinkerCookiesPrefix,
-      cookiesNamesList = _ref2.cookiesNamesList;
-    // Grab current GA4 and Google Ads / Campaign Manager Related cookies
-    var cookies = getCookies({
-      gaCookiesPrefix: gaCookiesPrefix,
-      conversionLinkerCookiesPrefix: conversionLinkerCookiesPrefix,
-      cookiesNamesList: cookiesNamesList
-    });
-    return ["1", getFingerPrint(cookies), cookies.join("*")].join("*");
+  function decorateAnchorTagWithLinker(linkerQueryParameter, linkerParameter, anchorElement, useFragment) {
+    if (anchorElement.href) {
+      var decoratedUrl = linkerParameter = decorateURLWithLinker(linkerQueryParameter, linkerParameter, anchorElement.href, useFragment);
+      urlChecker.test(decoratedUrl) && (anchorElement.href = decoratedUrl);
+    }
   }
-  function readLinker() {
-    var _ref3 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-      gaCookiesPrefix = _ref3.gaCookiesPrefix,
-      conversionLinkerCookiesPrefix = _ref3.conversionLinkerCookiesPrefix,
-      linkerQueryParameterName = _ref3.linkerQueryParameterName,
-      cookiesNamesList = _ref3.cookiesNamesList,
-      checkFingerPrint = _ref3.checkFingerPrint;
-    function getQueryParameterValue(parameterName) {
-      var url = window.location.href;
-      var reg = new RegExp("[?&]" + parameterName + "=([^&#]*)", "i");
-      var result = reg.exec(url);
-      return result === null ? null : decodeURIComponent(result[1]);
-    }
-    var cookiesDecoded = {};
-    var linkerParameterValue = getQueryParameterValue(linkerQueryParameterName);
-    if (!linkerParameterValue) return;
-    if (checkFingerPrint) {
-      var linkerFingerprint = linkerParameterValue.split("*")[1];
-      var cookies = getCookies({
-        gaCookiesPrefix: gaCookiesPrefix,
-        conversionLinkerCookiesPrefix: conversionLinkerCookiesPrefix,
-        cookiesNamesList: cookiesNamesList // Must be the same as the ones used to generate the Linker parameter
-      });
-
-      var currentFingerprint = getFingerPrint(cookies);
-      if (linkerFingerprint !== currentFingerprint) return;
-    }
-    var cookiesEncodedFromLinkerParameter = linkerParameterValue.split("*").slice(2);
-    for (var i = 0; i < cookiesEncodedFromLinkerParameter.length; i += 2) {
-      var cookieName = cookiesEncodedFromLinkerParameter[i];
-      var cookieValue = cookiesEncodedFromLinkerParameter[i + 1];
-      cookiesDecoded[cookieName] = untransformCookieValueFromLinkerFormat(cookieValue);
-    }
-    return cookiesDecoded;
-  }
-  function decorateWithLinker() {
-    var _ref4 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-      gaCookiesPrefix = _ref4.gaCookiesPrefix,
-      conversionLinkerCookiesPrefix = _ref4.conversionLinkerCookiesPrefix,
-      cookiesNamesList = _ref4.cookiesNamesList,
-      linkerQueryParameterName = _ref4.linkerQueryParameterName,
-      entity = _ref4.entity,
-      useFragment = _ref4.useFragment;
-    function decorateAnchorTagWithLinker(a, b, c, d) {
-      entity.href && (a = decorateURLWithLinker(a, b, c.href, void 0 === d ? !1 : d), t.test(a) && (c.href = a));
-    }
-    function decorateFormTagWithLinker(a, b, c) {
-      if (c && c.action) {
-        var d = (c.method || "").toLowerCase();
-        if ("get" === d) {
-          d = c.childNodes || [];
-          for (var e = !1, f = 0; f < d.length; f++) {
-            var h = d[f];
-            if (h.name === a) {
-              h.setAttribute("value", b);
-              e = !0;
-              break;
-            }
+  function decorateFormTagWithLinker(linkerQueryParameter, linkerParameter, formElement) {
+    if (formElement && formElement.action) {
+      var method = (formElement.method || "").toLowerCase();
+      if ("get" === method) {
+        var childNodes = formElement.childNodes || [];
+        for (var _found = false, i = 0; i < childNodes.length; i++) {
+          var childNode = childNodes[i];
+          if (childNode.name === linkerQueryParameter) {
+            childNode.setAttribute("value", linkerParameter);
+            _found = true;
+            break;
           }
-          e || (d = z.createElement("input"), d.setAttribute("type", "hidden"), d.setAttribute("name", a), d.setAttribute("value", b), c.appendChild(d));
-        } else "post" === d && (a = decorateURLWithLinker(a, b, c.action), t.test(a) && (c.action = a));
+        }
+        if (!found) {
+          var _childNode = document.createElement("input");
+          _childNode.setAttribute("type", "hidden");
+          _childNode.setAttribute("name", linkerQueryParameter);
+          _childNode.setAttribute("value", linkerParameter);
+          formElement.appendChild(_childNode);
+        }
+      } else if ("post" === method) {
+        var decoratedUrl = decorateURLWithLinker(linkerQueryParameter, linkerParameter, formElement.action);
+        urlChecker.test(decoratedUrl) && (formElement.action = decoratedUrl);
       }
     }
-    function decorateURLWithLinker(a, b, c, d) {
-      function e(k) {
-        k = U(a, k);
-        var m = k.charAt(k.length - 1);
-        k && "&" !== m && (k += "&");
-        return k + g;
-      }
-      d = void 0 === d ? !1 : d;
-      var f = fa.exec(c);
-      if (!f) return "";
-      c = f[1];
-      var h = f[2] || "";
-      f = f[3] || "";
-      var g = a + "=" + b;
-      d ? f = "#" + e(f.substring(1)) : h = "?" + e(h.substring(1));
-      return "" + c + h + f;
-    }
-    var linkerParameter = getLinker({
-      gaCookiesPrefix: gaCookiesPrefix,
-      conversionLinkerCookiesPrefix: conversionLinkerCookiesPrefix,
-      cookiesNamesList: cookiesNamesList
-    });
-    if (entity.tagName) {
-      if ("a" === entity.tagName.toLowerCase()) return decorateAnchorTagWithLinker(linkerQueryParameterName, linkerParameter, entity, useFragment);
-      if ("form" === entity.tagName.toLowerCase()) return decorateFormTagWithLinker(linkerQueryParameterName, linkerParameter, entity);
-    }
-    if ("string" === typeof entity) return decorateURLWithLinker(linkerQueryParameterName, linkerParameter, entity, useFragment);
   }
-  function getFingerPrint() {
-    var cookies = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "";
-    // Build Finger Print String
-    var fingerPrintString = [window.navigator.userAgent, new Date().getTimezoneOffset(), window.navigator.userLanguage || window.navigator.language, Math.floor(new Date().getTime() / 60 / 1e3) - 0, cookies ? cookies.join("*") : ""].join("*");
+  function decorateURLWithLinker(linkerQueryParameter, linkerParameter, url, useFragment) {
+    function Q(a) {
+      return new RegExp("(.*?)(^|&)" + a + "=([^&]*)&?(.*)");
+    }
+    function U(a, b) {
+      if (a = Q(a).exec(b)) {
+        var c = a[2],
+          d = a[4];
+        b = a[1];
+        d && (b = b + c + d);
+      }
+      return b;
+    }
+    function e(k) {
+      k = U(linkerQueryParameter, k);
+      var m = k.charAt(k.length - 1);
+      k && "&" !== m && (k += "&");
+      return k + g;
+    }
+    useFragment = !!useFragment;
+    var urlParsedIntoParts = /([^?#]+)(\?[^#]*)?(#.*)?/.exec(url);
+    if (!urlParsedIntoParts) return "";
+    var hostname = urlParsedIntoParts[1];
+    var queryString = urlParsedIntoParts[2] || "";
+    var fragment = urlParsedIntoParts[3] || "";
+    var g = linkerQueryParameter + "=" + linkerParameter;
+    useFragment ? ("#" + e(fragment.substring(1)), _readOnlyError("fragment")) : ("?" + e(queryString.substring(1)), _readOnlyError("queryString"));
+    return "" + hostname + queryString + fragment;
+  }
 
-    // make a CRC Table
+  // linkerCookiesValues argument is an array in the following format ['<cookie name 1>*<cookie value transformed 1>', ...]
+  function getFingerPrint() {
+    var linkerCookiesValues = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : undefined;
+    // Build Finger Print String
+    var fingerPrintString = [window.navigator.userAgent, new Date().getTimezoneOffset(), window.navigator.userLanguage || window.navigator.language, Math.floor(new Date().getTime() / 60 / 1e3) - 0, linkerCookiesValues ? linkerCookiesValues.join("*") : ""].join("*");
+
+    // Make a CRC Table
     var c;
     var crcTable = [];
     for (var n = 0; n < 256; n++) {
@@ -313,6 +237,92 @@ define((function () { 'use strict';
     crc = ((crc ^ -1) >>> 0).toString(36);
     return crc;
   }
+
+  function getLinker() {
+    var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      cookiesNamesList = _ref.cookiesNamesList;
+    // Grab current GA4 and Google Ads / Campaign Manager Related cookies
+    var linkerCookiesValues = generateLinkerValuesFromCookies({
+      cookiesNamesList: cookiesNamesList
+    });
+    return ["1", getFingerPrint(linkerCookiesValues), linkerCookiesValues.join("*")].join("*");
+  }
+  function readLinker() {
+    var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      linkerQueryParameterName = _ref2.linkerQueryParameterName,
+      cookiesNamesList = _ref2.cookiesNamesList,
+      checkFingerPrint = _ref2.checkFingerPrint;
+    return getLinkerValuesFromUrl({
+      linkerQueryParameterName: linkerQueryParameterName,
+      cookiesNamesList: cookiesNamesList,
+      checkFingerPrint: checkFingerPrint
+    });
+  }
+  function decorateWithLinker() {
+    var _ref3 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      linkerQueryParameterName = _ref3.linkerQueryParameterName,
+      cookiesNamesList = _ref3.cookiesNamesList,
+      entity = _ref3.entity,
+      useFragment = _ref3.useFragment;
+    var linkerParameter = getLinker({
+      cookiesNamesList: cookiesNamesList
+    });
+    if (entity.tagName) {
+      if ("A" === entity.tagName) return decorateAnchorTagWithLinker(linkerQueryParameterName, linkerParameter, entity, useFragment);
+      if ("FORM" === entity.tagName) return decorateFormTagWithLinker(linkerQueryParameterName, linkerParameter, entity);
+    }
+    if ("string" === typeof entity) return decorateURLWithLinker(linkerQueryParameterName, linkerParameter, entity, useFragment);
+  }
+
+  var googleTagLinker = function googleTagLinker() {
+    var action = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "get";
+    var settings = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    // Check if we are on a browser
+    if (typeof window === "undefined" || typeof window.document === "undefined") {
+      throw "This should be only run on a browser";
+    }
+    var defaultSettings = {
+      gaCookiesPrefix: settings.gaCookiesPrefix || undefined,
+      conversionLinkerCookiesPrefix: settings.conversionLinkerCookiesPrefix || "_gcl",
+      linkerQueryParameterName: settings.linkerQueryParameterName || "_gl",
+      checkFingerPrint: settings.checkFingerPrint || false,
+      useFragment: settings.useFragment || false
+    };
+    if (settings.cookiesNamesList) {
+      defaultSettings.cookiesNamesList = settings.cookiesNamesList;
+    } else {
+      defaultSettings.cookiesNamesList = [
+      // Main Google Analytics Cookie
+      defaultSettings.gaCookiesPrefix + "_ga",
+      // Google Analytics 4 Session Cookie (e.g. Data Stream ID is G-ABC123, the cookie will be _ga_ABC123)
+      new RegExp("^" + defaultSettings.gaCookiesPrefix + "_ga_[A-Z,0-9]")].concat(_toConsumableArray(["_aw", "_dc", "_gb", "_gf", "_ha"].map(function (name) {
+        return defaultSettings.conversionLinkerCookiesPrefix + name;
+      })), [
+      // First Party Linker Cookie maps to sGTM
+      "FPLC"]);
+    }
+    switch (action) {
+      case "get":
+        return getLinker({
+          cookiesNamesList: settings.cookiesNamesList
+        });
+      case "read":
+        return readLinker({
+          linkerQueryParameterName: settings.linkerQueryParameterName,
+          cookiesNamesList: settings.cookiesNamesList,
+          checkFingerPrint: settings.checkFingerPrint
+        });
+      case "decorate":
+        return decorateWithLinker({
+          linkerQueryParameterName: settings.linkerQueryParameterName,
+          cookiesNamesList: settings.cookiesNamesList,
+          entity: settings.entity,
+          useFragment: settings.useFragment
+        });
+    }
+  };
+  googleTagLinker.prototype = {};
+  googleTagLinker.answer = 42;
 
   return googleTagLinker;
 
