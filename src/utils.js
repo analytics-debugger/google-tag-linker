@@ -31,29 +31,24 @@ function getQueryParameterValue(parameterName) {
     // return searchParams.get(parameterName);
 }
 
-export function getLinkerValuesFromUrl({
-    linkerQueryParameterName,
-    cookiesNamesList,
-    checkFingerPrint
-} = {}) {
+export function getLinkerValuesFromUrl({ linkerQueryParameterName, checkFingerPrint } = {}) {
     const linkerParameterValue = getQueryParameterValue(linkerQueryParameterName);
     if (!linkerParameterValue) return;
 
-    if (checkFingerPrint) {
-        const linkerFingerprint = linkerParameterValue.split("*")[1];
-        const linkerCookiesValues = generateLinkerValuesFromCookies({
-            cookiesNamesList // Must be the same as the ones used to generate the Linker parameter
-        });
-        const currentFingerprint = getFingerPrint(linkerCookiesValues);
-        if (linkerFingerprint !== currentFingerprint) return;
-    }
-
     const cookiesEncodedFromLinkerParameter = linkerParameterValue.split("*").slice(2);
     const cookiesDecodedFromUrl = {};
+    const valuesToCalculateFingerprintFrom = [];
     for (let i = 0; i < cookiesEncodedFromLinkerParameter.length; i += 2) {
         const cookieName = cookiesEncodedFromLinkerParameter[i];
         const cookieValue = cookiesEncodedFromLinkerParameter[i + 1];
+        valuesToCalculateFingerprintFrom.push(cookieName + "*" + cookieValue);
         cookiesDecodedFromUrl[cookieName] = untransformCookieValueFromLinkerFormat(cookieValue);
+    }
+
+    if (checkFingerPrint) {
+        const currentFingerprint = getFingerPrint(valuesToCalculateFingerprintFrom);
+        const linkerFingerprint = linkerParameterValue.split("*")[1];
+        if (linkerFingerprint !== currentFingerprint) return;
     }
 
     return cookiesDecodedFromUrl;
@@ -64,8 +59,9 @@ export function generateLinkerValuesFromCookies({ cookiesNamesList } = {}) {
     let _FPLC = undefined;
 
     cookiesNamesList.forEach(function (cookieName) {
-        let cookieValue;
-        [cookieName, cookieValue] = getCookieNameAndValue(cookieName);
+        const cookieNameAndValue = getCookieNameAndValue(cookieName);
+        cookieName = cookieNameAndValue[0];
+        let cookieValue = cookieNameAndValue[1];
         if (!cookieValue) return; // Proceed to next iteration.
         if (/^_ga/.test(cookieName)) {
             cookieValue = cookieValue.match(/G[A-Z]1\.[0-9]\.(.+)/)[1];
@@ -92,14 +88,14 @@ export function decorateAnchorTagWithLinker(
     anchorElement,
     useFragment
 ) {
-    if (anchorElement.href) {
+    if (anchorElement && anchorElement.href) {
         const decoratedUrl = (linkerParameter = decorateURLWithLinker(
             linkerQueryParameter,
             linkerParameter,
             anchorElement.href,
             useFragment
         ));
-        urlChecker.test(decoratedUrl) && (anchorElement.href = decoratedUrl);
+        if (urlChecker.test(decoratedUrl)) anchorElement.href = decoratedUrl;
     }
 }
 
@@ -108,7 +104,8 @@ export function decorateFormTagWithLinker(linkerQueryParameter, linkerParameter,
         const method = (formElement.method || "").toLowerCase();
         if ("get" === method) {
             const childNodes = formElement.childNodes || [];
-            for (let found = false, i = 0; i < childNodes.length; i++) {
+            let found = false;
+            for (let i = 0; i < childNodes.length; i++) {
                 const childNode = childNodes[i];
                 if (childNode.name === linkerQueryParameter) {
                     childNode.setAttribute("value", linkerParameter);
@@ -129,7 +126,7 @@ export function decorateFormTagWithLinker(linkerQueryParameter, linkerParameter,
                 linkerParameter,
                 formElement.action
             );
-            urlChecker.test(decoratedUrl) && (formElement.action = decoratedUrl);
+            if (urlChecker.test(decoratedUrl)) formElement.action = decoratedUrl;
         }
     }
 }
@@ -141,7 +138,7 @@ export function decorateURLWithLinker(linkerQueryParameter, linkerParameter, url
 
     function U(a, b) {
         if ((a = Q(a).exec(b))) {
-            var c = a[2],
+            const c = a[2],
                 d = a[4];
             b = a[1];
             d && (b = b + c + d);
@@ -151,25 +148,24 @@ export function decorateURLWithLinker(linkerQueryParameter, linkerParameter, url
 
     function e(k) {
         k = U(linkerQueryParameter, k);
-        var m = k.charAt(k.length - 1);
+        const m = k.charAt(k.length - 1);
         k && "&" !== m && (k += "&");
-        return k + g;
+        return k + linkerParameterKeyValueQuery;
     }
 
     useFragment = !!useFragment;
-    var urlParsedIntoParts = /([^?#]+)(\?[^#]*)?(#.*)?/.exec(url);
+    const urlParsedIntoParts = /([^?#]+)(\?[^#]*)?(#.*)?/.exec(url);
     if (!urlParsedIntoParts) return "";
     const hostname = urlParsedIntoParts[1];
-    const queryString = urlParsedIntoParts[2] || "";
-    const fragment = urlParsedIntoParts[3] || "";
-    var g = linkerQueryParameter + "=" + linkerParameter;
-    useFragment
-        ? (fragment = "#" + e(fragment.substring(1)))
-        : (queryString = "?" + e(queryString.substring(1)));
+    let queryString = urlParsedIntoParts[2] || "";
+    let fragment = urlParsedIntoParts[3] || "";
+    const linkerParameterKeyValueQuery = linkerQueryParameter + "=" + linkerParameter;
+    if (useFragment) fragment = "#" + e(fragment.substring(1), linkerParameterKeyValueQuery);
+    else queryString = "?" + e(queryString.substring(1), linkerParameterKeyValueQuery);
     return "" + hostname + queryString + fragment;
 }
 
-// linkerCookiesValues argument is an array in the following format ['<cookie name 1>*<cookie value transformed 1>', ...]
+// linkerCookiesValues argument is an array in the following format ['<cookie name 1>*<cookie value Base-64 transformed 1>', ...]
 export function getFingerPrint(linkerCookiesValues = undefined) {
     // Build Finger Print String
     const fingerPrintString = [

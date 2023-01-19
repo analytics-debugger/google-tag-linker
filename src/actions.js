@@ -19,7 +19,6 @@ export function getLinker({ cookiesNamesList } = {}) {
 export function readLinker({ linkerQueryParameterName, cookiesNamesList, checkFingerPrint } = {}) {
     return getLinkerValuesFromUrl({
         linkerQueryParameterName,
-        cookiesNamesList,
         checkFingerPrint
     });
 }

@@ -1,5 +1,7 @@
 const urlChecker = /^(?:(?:https?|mailto|ftp):|[^:/?#]*(?:[/?#]|$))/i;
 
+// PART 1 - START
+
 function getCookieNameAndValue(cookieName) {
     const cookiesNamesAndValues = ("; " + document.cookie).split("; ");
     for (let i = cookiesNamesAndValues.length - 1; i >= 0; i--) {
@@ -31,29 +33,24 @@ function getQueryParameterValue(parameterName) {
     // return searchParams.get(parameterName);
 }
 
-function getLinkerValuesFromUrl({
-    linkerQueryParameterName,
-    cookiesNamesList,
-    checkFingerPrint
-} = {}) {
+function getLinkerValuesFromUrl({ linkerQueryParameterName, checkFingerPrint } = {}) {
     const linkerParameterValue = getQueryParameterValue(linkerQueryParameterName);
     if (!linkerParameterValue) return;
 
-    if (checkFingerPrint) {
-        const linkerFingerprint = linkerParameterValue.split("*")[1];
-        const linkerCookiesValues = generateLinkerValuesFromCookies({
-            cookiesNamesList // Must be the same as the ones used to generate the Linker parameter
-        });
-        const currentFingerprint = getFingerPrint(linkerCookiesValues);
-        if (linkerFingerprint !== currentFingerprint) return;
-    }
-
     const cookiesEncodedFromLinkerParameter = linkerParameterValue.split("*").slice(2);
     const cookiesDecodedFromUrl = {};
+    const valuesToCalculateFingerprintFrom = [];
     for (let i = 0; i < cookiesEncodedFromLinkerParameter.length; i += 2) {
         const cookieName = cookiesEncodedFromLinkerParameter[i];
         const cookieValue = cookiesEncodedFromLinkerParameter[i + 1];
+        valuesToCalculateFingerprintFrom.push(cookieName + "*" + cookieValue);
         cookiesDecodedFromUrl[cookieName] = untransformCookieValueFromLinkerFormat(cookieValue);
+    }
+
+    if (checkFingerPrint) {
+        const currentFingerprint = getFingerPrint(valuesToCalculateFingerprintFrom);
+        const linkerFingerprint = linkerParameterValue.split("*")[1];
+        if (linkerFingerprint !== currentFingerprint) return;
     }
 
     return cookiesDecodedFromUrl;
@@ -64,8 +61,9 @@ function generateLinkerValuesFromCookies({ cookiesNamesList } = {}) {
     let _FPLC = undefined;
 
     cookiesNamesList.forEach(function (cookieName) {
-        let cookieValue;
-        [cookieName, cookieValue] = getCookieNameAndValue(cookieName);
+        const cookieNameAndValue = getCookieNameAndValue(cookieName);
+        cookieName = cookieNameAndValue[0];
+        let cookieValue = cookieNameAndValue[1];
         if (!cookieValue) return; // Proceed to next iteration.
         if (/^_ga/.test(cookieName)) {
             cookieValue = cookieValue.match(/G[A-Z]1\.[0-9]\.(.+)/)[1];
@@ -92,14 +90,14 @@ function decorateAnchorTagWithLinker(
     anchorElement,
     useFragment
 ) {
-    if (anchorElement.href) {
+    if (anchorElement && anchorElement.href) {
         const decoratedUrl = (linkerParameter = decorateURLWithLinker(
             linkerQueryParameter,
             linkerParameter,
             anchorElement.href,
             useFragment
         ));
-        urlChecker.test(decoratedUrl) && (anchorElement.href = decoratedUrl);
+        if (urlChecker.test(decoratedUrl)) anchorElement.href = decoratedUrl;
     }
 }
 
@@ -108,7 +106,8 @@ function decorateFormTagWithLinker(linkerQueryParameter, linkerParameter, formEl
         const method = (formElement.method || "").toLowerCase();
         if ("get" === method) {
             const childNodes = formElement.childNodes || [];
-            for (let found = false, i = 0; i < childNodes.length; i++) {
+            let found = false;
+            for (let i = 0; i < childNodes.length; i++) {
                 const childNode = childNodes[i];
                 if (childNode.name === linkerQueryParameter) {
                     childNode.setAttribute("value", linkerParameter);
@@ -129,7 +128,7 @@ function decorateFormTagWithLinker(linkerQueryParameter, linkerParameter, formEl
                 linkerParameter,
                 formElement.action
             );
-            urlChecker.test(decoratedUrl) && (formElement.action = decoratedUrl);
+            if (urlChecker.test(decoratedUrl)) formElement.action = decoratedUrl;
         }
     }
 }
@@ -141,7 +140,7 @@ function decorateURLWithLinker(linkerQueryParameter, linkerParameter, url, useFr
 
     function U(a, b) {
         if ((a = Q(a).exec(b))) {
-            var c = a[2],
+            const c = a[2],
                 d = a[4];
             b = a[1];
             d && (b = b + c + d);
@@ -151,25 +150,24 @@ function decorateURLWithLinker(linkerQueryParameter, linkerParameter, url, useFr
 
     function e(k) {
         k = U(linkerQueryParameter, k);
-        var m = k.charAt(k.length - 1);
+        const m = k.charAt(k.length - 1);
         k && "&" !== m && (k += "&");
-        return k + g;
+        return k + linkerParameterKeyValueQuery;
     }
 
     useFragment = !!useFragment;
-    var urlParsedIntoParts = /([^?#]+)(\?[^#]*)?(#.*)?/.exec(url);
+    const urlParsedIntoParts = /([^?#]+)(\?[^#]*)?(#.*)?/.exec(url);
     if (!urlParsedIntoParts) return "";
     const hostname = urlParsedIntoParts[1];
-    const queryString = urlParsedIntoParts[2] || "";
-    const fragment = urlParsedIntoParts[3] || "";
-    var g = linkerQueryParameter + "=" + linkerParameter;
-    useFragment
-        ? (fragment = "#" + e(fragment.substring(1)))
-        : (queryString = "?" + e(queryString.substring(1)));
+    let queryString = urlParsedIntoParts[2] || "";
+    let fragment = urlParsedIntoParts[3] || "";
+    const linkerParameterKeyValueQuery = linkerQueryParameter + "=" + linkerParameter;
+    if (useFragment) fragment = "#" + e(fragment.substring(1));
+    else queryString = "?" + e(queryString.substring(1));
     return "" + hostname + queryString + fragment;
 }
 
-// linkerCookiesValues argument is an array in the following format ['<cookie name 1>*<cookie value transformed 1>', ...]
+// linkerCookiesValues argument is an array in the following format ['<cookie name 1>*<cookie value Base-64 transformed 1>', ...]
 function getFingerPrint(linkerCookiesValues = undefined) {
     // Build Finger Print String
     const fingerPrintString = [
@@ -212,7 +210,6 @@ function getLinker({ cookiesNamesList } = {}) {
 function readLinker({ linkerQueryParameterName, cookiesNamesList, checkFingerPrint } = {}) {
     return getLinkerValuesFromUrl({
         linkerQueryParameterName,
-        cookiesNamesList,
         checkFingerPrint
     });
 }
@@ -248,80 +245,77 @@ function decorateWithLinker({
         );
 }
 
-/*
-
-[x] Add Adwords / Double Click Support
-    [x] Confirmar quais são os cookies usados para esse caso.
-        '_gcl_aw', '_gcl_dc', '_gcl_gf', '_gcl_ha', '_gcl_gb'
-    [x] Colocar opção para pessoa escolher o prefixo do cookie (do GA e Conversion Linker). Alterar assinatura de getCookies.
-
-[x] QA environments with multiple cookies
-    [x] Ler somente o último cookie de document.cookies, pois será sempre o mais atualizado.
-       O  código original pega sempre o último cookie.
-
-[x] Add the chance to manually defined the cookies to be passed. Alterar assinatura de getCookies.
-    [x] Se não passar nada, pega os default que o GA4 usa (_ga e _ga_<stream> e FPLC)
-
-[x] Add a "read" method to decode the linkerParam to the real cookie values
-    [x] Checar se fingerprint bate.
-    [x] Se bater, pegar cada query e fazer atob(query.replace(/\./g, '='))
-
-[x] Add a "decorate" method
-    Usar a mesma ideia de window.google_tag_data.glBridge.decorate(generateArgumentObject, element);
-    Checar no código o que é que fazem para cada caso.
-    [x] Se for string, decora a string e retorna.
-    [x] Se for HTMLAnchorElement ou HTMLFormElement, decora os atributos que contém o link e retorna (o próprio elemento ou a string. Checar.)
-
-
-[x] Renomear getCookies e as variáveis que capturam o retorno. Alterar o nome do argumento de getFingerprint.
-
-
-[x] Gerenciar argumentos default.
-
-[] Testar "decorate".
-
-[] Enviar para o Chat GPT
-    [] Pedir para arrumar o readme.
-    [] Solicitar que documente apenas 2 funções por vez. Assim dará para pegar todas.
-    [] Pedir para gerar testes.
-
-*/
-
 const googleTagLinker = function (action = "get", settings = {}) {
     // Check if we are on a browser
     if (typeof window === "undefined" || typeof window.document === "undefined") {
         throw "This should be only run on a browser";
     }
 
-    ({
-        gaCookiesPrefix: settings.gaCookiesPrefix || undefined,
+    const defaultSettings = {
+        gaCookiesPrefix: settings.gaCookiesPrefix || "",
         conversionLinkerCookiesPrefix: settings.conversionLinkerCookiesPrefix || "_gcl",
         linkerQueryParameterName: settings.linkerQueryParameterName || "_gl",
         checkFingerPrint: settings.checkFingerPrint || false,
         useFragment: settings.useFragment || false
-    });
+    };
 
     if (settings.cookiesNamesList) {
-        settings.cookiesNamesList;
+        defaultSettings.cookiesNamesList = settings.cookiesNamesList;
+    } else {
+        defaultSettings.cookiesNamesList = [
+            // Main Google Analytics Cookie
+            defaultSettings.gaCookiesPrefix + "_ga",
+
+            // Google Analytics 4 Session Cookie (e.g. Data Stream ID is G-ABC123, the cookie will be _ga_ABC123)
+            new RegExp("^" + defaultSettings.gaCookiesPrefix + "_ga_[A-Z,0-9]"),
+
+            // First Party Linker Cookie maps to sGTM
+            "FPLC"
+        ];
+
+        // Google Ads (gclid, gclsrc maps to _aw, _dc, _gf, _ha cookies)
+        // Campaign Manager (dclid, gclsrc maps to _aw, _dc, _gf, _ha cookies)
+        // wbraid (wbraid maps to _gb cookie)
+        ["_aw", "_dc", "_gb", "_gf", "_ha"].forEach((name) => {
+            defaultSettings.cookiesNamesList.push(
+                defaultSettings.conversionLinkerCookiesPrefix + name
+            );
+        });
     }
+
+    defaultSettings.cookiesNamesList = settings.cookiesNamesList
+        ? settings.cookiesNamesList
+        : [
+              // Main Google Analytics Cookie
+              defaultSettings.gaCookiesPrefix + "_ga",
+              // Google Analytics 4 Session Cookie (e.g. Data Stream ID is G-ABC123, the cookie will be _ga_ABC123)
+              new RegExp("^" + defaultSettings.gaCookiesPrefix + "_ga_[A-Z,0-9]"),
+              // Google Ads (gclid, gclsrc maps to _aw, _dc, _gf, _ha cookies)
+              // Campaign Manager (dclid, gclsrc maps to _aw, _dc, _gf, _ha cookies)
+              // wbraid (wbraid maps to _gb cookie)
+              ...["_aw", "_dc", "_gb", "_gf", "_ha"].map(
+                  (name) => defaultSettings.conversionLinkerCookiesPrefix + name
+              ),
+              // First Party Linker Cookie maps to sGTM
+              "FPLC"
+          ];
 
     switch (action) {
         case "get":
             return getLinker({
-                cookiesNamesList: settings.cookiesNamesList
+                cookiesNamesList: defaultSettings.cookiesNamesList
             });
         case "read":
             return readLinker({
-                linkerQueryParameterName: settings.linkerQueryParameterName,
-                cookiesNamesList: settings.cookiesNamesList,
-                checkFingerPrint: settings.checkFingerPrint
+                linkerQueryParameterName: defaultSettings.linkerQueryParameterName,
+                checkFingerPrint: defaultSettings.checkFingerPrint
             });
         case "decorate":
             return decorateWithLinker({
-                linkerQueryParameterName: settings.linkerQueryParameterName,
-                cookiesNamesList: settings.cookiesNamesList,
+                linkerQueryParameterName: defaultSettings.linkerQueryParameterName,
+                cookiesNamesList: defaultSettings.cookiesNamesList,
                 entity: settings.entity,
-                useFragment: settings.useFragment
+                useFragment: defaultSettings.useFragment
             });
     }
 };
