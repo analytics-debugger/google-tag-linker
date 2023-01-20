@@ -27,8 +27,6 @@ function getQueryParameterValue(parameterName) {
     const reg = new RegExp("[?&]" + parameterName + "=([^&#]*)", "i");
     const result = reg.exec(url);
     return result === null ? null : decodeURIComponent(result[1]);
-    // const searchParams = new URLSearchParams(url);
-    // return searchParams.get(parameterName);
 }
 
 export function getLinkerValuesFromUrl({ linkerQueryParameterName, checkFingerPrint } = {}) {
@@ -54,30 +52,47 @@ export function getLinkerValuesFromUrl({ linkerQueryParameterName, checkFingerPr
     return cookiesDecodedFromUrl;
 }
 
-export function generateLinkerValuesFromCookies({ cookiesNamesList } = {}) {
+export function generateLinkerValuesFromCookies({ cookiesNamesList, gaCookiesPrefix } = {}) {
+    const gaCookiesRegex = new RegExp("^" + gaCookiesPrefix + "_ga");
     const cookiesValuesFormmatedForLinker = [];
     let _FPLC = undefined;
 
-    cookiesNamesList.forEach(function (cookieName) {
-        const cookieNameAndValue = getCookieNameAndValue(cookieName);
-        cookieName = cookieNameAndValue[0];
-        let cookieValue = cookieNameAndValue[1];
-        if (!cookieValue) return; // Proceed to next iteration.
-        if (/^_ga/.test(cookieName)) {
-            cookieValue = cookieValue.match(/G[A-Z]1\.[0-9]\.(.+)/)[1];
-        } else if (cookieName === "FPLC") {
-            _FPLC = cookieValue;
-        }
-        cookiesValuesFormmatedForLinker.push(
-            transformCookieNameAndValueToLinkerFormat(cookieName, cookieValue)
-        );
-    });
+    // If it's not an array, then it's an object containing the cookies name and values. We don't have to read them.
+    if (!Array.isArray(cookiesNamesList)) {
+        Object.keys(cookiesNamesList).forEach((cookieName) => {
+            const cookieValue = cookiesNamesList[cookieName];
+            if (cookieName === "FPLC") {
+                _FPLC = cookieValue;
+                return;
+            }
+            cookiesValuesFormmatedForLinker.push(
+                transformCookieNameAndValueToLinkerFormat(cookieName, cookieValue)
+            );
+        });
+    } else {
+        cookiesNamesList.forEach((cookieName) => {
+            const cookieNameAndValue = getCookieNameAndValue(cookieName);
+            cookieName = cookieNameAndValue[0];
+            let cookieValue = cookieNameAndValue[1];
+            if (!cookieValue) return;
+            if (gaCookiesRegex.test(cookieName)) {
+                cookieValue = cookieValue.match(/G[A-Z]1\.[0-9]\.(.+)/)[1];
+            } else if (cookieName === "FPLC") {
+                _FPLC = cookieValue;
+                return;
+            }
+            cookiesValuesFormmatedForLinker.push(
+                transformCookieNameAndValueToLinkerFormat(cookieName, cookieValue)
+            );
+        });
+    }
 
     // This needs to go at the end
-    if (_FPLC)
+    if (_FPLC) {
         cookiesValuesFormmatedForLinker.push(
             transformCookieNameAndValueToLinkerFormat("_fplc", _FPLC)
         );
+    }
 
     return cookiesValuesFormmatedForLinker;
 }

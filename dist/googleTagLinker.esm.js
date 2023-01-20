@@ -1,7 +1,5 @@
 const urlChecker = /^(?:(?:https?|mailto|ftp):|[^:/?#]*(?:[/?#]|$))/i;
 
-// PART 1 - START
-
 function getCookieNameAndValue(cookieName) {
     const cookiesNamesAndValues = ("; " + document.cookie).split("; ");
     for (let i = cookiesNamesAndValues.length - 1; i >= 0; i--) {
@@ -29,8 +27,6 @@ function getQueryParameterValue(parameterName) {
     const reg = new RegExp("[?&]" + parameterName + "=([^&#]*)", "i");
     const result = reg.exec(url);
     return result === null ? null : decodeURIComponent(result[1]);
-    // const searchParams = new URLSearchParams(url);
-    // return searchParams.get(parameterName);
 }
 
 function getLinkerValuesFromUrl({ linkerQueryParameterName, checkFingerPrint } = {}) {
@@ -56,30 +52,47 @@ function getLinkerValuesFromUrl({ linkerQueryParameterName, checkFingerPrint } =
     return cookiesDecodedFromUrl;
 }
 
-function generateLinkerValuesFromCookies({ cookiesNamesList } = {}) {
+function generateLinkerValuesFromCookies({ cookiesNamesList, gaCookiesPrefix } = {}) {
+    const gaCookiesRegex = new RegExp("^" + gaCookiesPrefix + "_ga");
     const cookiesValuesFormmatedForLinker = [];
     let _FPLC = undefined;
 
-    cookiesNamesList.forEach(function (cookieName) {
-        const cookieNameAndValue = getCookieNameAndValue(cookieName);
-        cookieName = cookieNameAndValue[0];
-        let cookieValue = cookieNameAndValue[1];
-        if (!cookieValue) return; // Proceed to next iteration.
-        if (/^_ga/.test(cookieName)) {
-            cookieValue = cookieValue.match(/G[A-Z]1\.[0-9]\.(.+)/)[1];
-        } else if (cookieName === "FPLC") {
-            _FPLC = cookieValue;
-        }
-        cookiesValuesFormmatedForLinker.push(
-            transformCookieNameAndValueToLinkerFormat(cookieName, cookieValue)
-        );
-    });
+    // If it's not an array, then it's an object containing the cookies name and values. We don't have to read them.
+    if (!Array.isArray(cookiesNamesList)) {
+        Object.keys(cookiesNamesList).forEach((cookieName) => {
+            const cookieValue = cookiesNamesList[cookieName];
+            if (cookieName === "FPLC") {
+                _FPLC = cookieValue;
+                return;
+            }
+            cookiesValuesFormmatedForLinker.push(
+                transformCookieNameAndValueToLinkerFormat(cookieName, cookieValue)
+            );
+        });
+    } else {
+        cookiesNamesList.forEach((cookieName) => {
+            const cookieNameAndValue = getCookieNameAndValue(cookieName);
+            cookieName = cookieNameAndValue[0];
+            let cookieValue = cookieNameAndValue[1];
+            if (!cookieValue) return;
+            if (gaCookiesRegex.test(cookieName)) {
+                cookieValue = cookieValue.match(/G[A-Z]1\.[0-9]\.(.+)/)[1];
+            } else if (cookieName === "FPLC") {
+                _FPLC = cookieValue;
+                return;
+            }
+            cookiesValuesFormmatedForLinker.push(
+                transformCookieNameAndValueToLinkerFormat(cookieName, cookieValue)
+            );
+        });
+    }
 
     // This needs to go at the end
-    if (_FPLC)
+    if (_FPLC) {
         cookiesValuesFormmatedForLinker.push(
             transformCookieNameAndValueToLinkerFormat("_fplc", _FPLC)
         );
+    }
 
     return cookiesValuesFormmatedForLinker;
 }
@@ -198,10 +211,11 @@ function getFingerPrint(linkerCookiesValues = undefined) {
     return crc;
 }
 
-function getLinker({ cookiesNamesList } = {}) {
+function getLinker({ cookiesNamesList, gaCookiesPrefix } = {}) {
     // Grab current GA4 and Google Ads / Campaign Manager Related cookies
     const linkerCookiesValues = generateLinkerValuesFromCookies({
-        cookiesNamesList
+        cookiesNamesList,
+        gaCookiesPrefix
     });
 
     return ["1", getFingerPrint(linkerCookiesValues), linkerCookiesValues.join("*")].join("*");
@@ -245,6 +259,16 @@ function decorateWithLinker({
         );
 }
 
+/*
+
+
+[] Enviar para o Chat GPT
+    [] Pedir para arrumar o readme.
+    [] Solicitar que documente apenas 2 funções por vez. Assim dará para pegar todas.
+    [] Pedir para gerar testes.
+
+*/
+
 const googleTagLinker = function (action = "get", settings = {}) {
     // Check if we are on a browser
     if (typeof window === "undefined" || typeof window.document === "undefined") {
@@ -283,27 +307,11 @@ const googleTagLinker = function (action = "get", settings = {}) {
         });
     }
 
-    defaultSettings.cookiesNamesList = settings.cookiesNamesList
-        ? settings.cookiesNamesList
-        : [
-              // Main Google Analytics Cookie
-              defaultSettings.gaCookiesPrefix + "_ga",
-              // Google Analytics 4 Session Cookie (e.g. Data Stream ID is G-ABC123, the cookie will be _ga_ABC123)
-              new RegExp("^" + defaultSettings.gaCookiesPrefix + "_ga_[A-Z,0-9]"),
-              // Google Ads (gclid, gclsrc maps to _aw, _dc, _gf, _ha cookies)
-              // Campaign Manager (dclid, gclsrc maps to _aw, _dc, _gf, _ha cookies)
-              // wbraid (wbraid maps to _gb cookie)
-              ...["_aw", "_dc", "_gb", "_gf", "_ha"].map(
-                  (name) => defaultSettings.conversionLinkerCookiesPrefix + name
-              ),
-              // First Party Linker Cookie maps to sGTM
-              "FPLC"
-          ];
-
     switch (action) {
         case "get":
             return getLinker({
-                cookiesNamesList: defaultSettings.cookiesNamesList
+                cookiesNamesList: defaultSettings.cookiesNamesList,
+                gaCookiesPrefix: defaultSettings.gaCookiesPrefix
             });
         case "read":
             return readLinker({

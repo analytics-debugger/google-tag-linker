@@ -48,27 +48,11 @@ const googleTagLinker = function (action = "get", settings = {}) {
         });
     }
 
-    defaultSettings.cookiesNamesList = settings.cookiesNamesList
-        ? settings.cookiesNamesList
-        : [
-              // Main Google Analytics Cookie
-              defaultSettings.gaCookiesPrefix + "_ga",
-              // Google Analytics 4 Session Cookie (e.g. Data Stream ID is G-ABC123, the cookie will be _ga_ABC123)
-              new RegExp("^" + defaultSettings.gaCookiesPrefix + "_ga_[A-Z,0-9]"),
-              // Google Ads (gclid, gclsrc maps to _aw, _dc, _gf, _ha cookies)
-              // Campaign Manager (dclid, gclsrc maps to _aw, _dc, _gf, _ha cookies)
-              // wbraid (wbraid maps to _gb cookie)
-              ...["_aw", "_dc", "_gb", "_gf", "_ha"].map(
-                  (name) => defaultSettings.conversionLinkerCookiesPrefix + name
-              ),
-              // First Party Linker Cookie maps to sGTM
-              "FPLC"
-          ];
-
     switch (action) {
         case "get":
             return getLinker({
-                cookiesNamesList: defaultSettings.cookiesNamesList
+                cookiesNamesList: defaultSettings.cookiesNamesList,
+                gaCookiesPrefix: defaultSettings.gaCookiesPrefix
             });
         case "read":
             return readLinker({

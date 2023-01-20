@@ -7,10 +7,11 @@ import {
     getFingerPrint
 } from "./utils.js";
 
-export function getLinker({ cookiesNamesList } = {}) {
+export function getLinker({ cookiesNamesList, gaCookiesPrefix } = {}) {
     // Grab current GA4 and Google Ads / Campaign Manager Related cookies
     const linkerCookiesValues = generateLinkerValuesFromCookies({
-        cookiesNamesList
+        cookiesNamesList,
+        gaCookiesPrefix
     });
 
     return ["1", getFingerPrint(linkerCookiesValues), linkerCookiesValues.join("*")].join("*");
