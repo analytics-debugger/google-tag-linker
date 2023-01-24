@@ -1,6 +1,6 @@
 # Google Tag Linker Brigde
 
-Hola! Olá! This is a **JavaScript** library that provided the needed functionality for creating a linkerParam for Google analytics 4 (**_`Google Tag`_** , **_`GTAG`_**). I started this work back in 2019 when I first saw the new `_gl` parameter.
+Hola! Olá! This is a **JavaScript** library that provided the needed functionality for creating a `linkerParam` for Google Analytics 4 (**_`Google Tag`_** , **_`GTAG`_**). I started this work back in 2019 when I first saw the new `_gl` parameter.
 
 At the time of publishing this library Google doesn't offer any "documented" way of generating this value, making really hard to work with custom implementations, for example when needing to deal with iFrames or forms/links generated dynamically.
 
@@ -10,15 +10,15 @@ The library is provided in the `AMD`, `UMD`, `IIFE` and `ESM` formats, all of th
 
 Google Tag cross-domain works pretty similarly to how previous Google Analytics worked. It's basically based on 2 different parts.
 
-1. A Fingerprint (Browser/Time)
-2. The List of Cookies to be passed to the new domain
+1. A fingerprint (Browser/Time)
+2. The list of cookies to be passed to the new domain
 
 The fingerprinting is done using the following values:
 
 - Navigator User Agent
 - User Timezone
 - Navigator Language
-- Current Time (current inute index from EPOC TimeStamp Rounded)
+- Current Time (current minute index from EPOC TimeStamp Rounded)
 - A list of cookies passed on the linker
 
 The usage for this fingerprinting is not identifying the user, but making the current link only to work on the current user browser and making it valid only for the current minute (since many users may share the same browser specs).
@@ -27,7 +27,7 @@ The usage for this fingerprinting is not identifying the user, but making the cu
 
 The Linker Parameter will look like this:
 
-    1*dm649n*[_ga*MTM2MDM4NDg1MS4xNjYxODIxMjQy]*[_ga_THYNGSTER*XXXXXXXXXXXXXXX]*[_gcl_aw*AAAAAAAAAAAA]*[_gcl_dc*BBBBBBBBBBB]*[_gcl_gb*CCCCCCCCCCCC]*[_gcl_gf*DDDDDDDDDDD]*[_gcl_ha*EEEEEEEEEEEE]_[_fplc*MTExMTExMTExMTExMTExMTExMTEx]
+    1*dm649n*_ga*MTM2MDM4NDg1MS4xNjYxODIxMjQy*_ga_THYNGSTER*XXXXXXXXXXXXXXX*_gcl_aw*AAAAAAAAAAAA*_gcl_dc*BBBBBBBBBBB*_gcl_gb*CCCCCCCCCCCC*_gcl_gf*DDDDDDDDDDD*_gcl_ha*EEEEEEEEEEEE*_fplc*MTExMTExMTExMTExMTExMTExMTEx
 
 Which follows the following definition:
 
@@ -35,16 +35,16 @@ Which follows the following definition:
 
 This tool will read and pass the following cookies by default:
 
-| Cookie Name | Description                             |
-| ----------- | --------------------------------------- |
-| `({prefix})?`_ga        | Universal and Google Analytics 4 Cookie |
-| `({prefix})?`_ga_XXXXXX | Google Analytics 4 Session Cookie       |
-| `({prefix}\|_gcl)`_aw | Google Analytics Ads / Campaign Manager Cookies - gclid, dclid, gclsrc URL parameters     |
-| `({prefix}\|_gcl)`_dc | Google Analytics Ads / Campaign Manager Cookies - gclid, dclid, gclsrc URL parameters       |
-| `({prefix}\|_gcl)`_gb | Google Analytics Ads / Campaign Manager Cookies - gclid, dclid, gclsrc, wbraid URL parameters       |
-| `({prefix}\|_gcl)`_gf | Google Analytics Ads / Campaign Manager Cookies - gclid, dclid, gclsrc URL parameters      |
-| `({prefix}\|_gcl)`_ha | Google Analytics Ads / Campaign Manager Cookies - gclid, dclid, gclsrc URL parameters       |
-| FPLC        | First Party Linker Cookie from SGTM cookie  |
+| Cookie Name | Description |
+| ----------- | ----------- |
+| `({prefix})?`_ga | Universal and Google Analytics 4 Cookie |
+| `({prefix})?`_ga_XXXXXX | Google Analytics 4 Session Cookie |
+| `({prefix}\|_gcl)`_aw | Google Analytics Ads / Campaign Manager Cookies - gclid, dclid, gclsrc URL parameters |
+| `({prefix}\|_gcl)`_dc | Google Analytics Ads / Campaign Manager Cookies - gclid, dclid, gclsrc URL parameters |
+| `({prefix}\|_gcl)`_gb | Google Analytics Ads / Campaign Manager Cookies - gclid, dclid, gclsrc, wbraid URL parameters |
+| `({prefix}\|_gcl)`_gf | Google Analytics Ads / Campaign Manager Cookies - gclid, dclid, gclsrc URL parameters  |
+| `({prefix}\|_gcl)`_ha | Google Analytics Ads / Campaign Manager Cookies - gclid, dclid, gclsrc URL parameters |
+| FPLC | First Party Linker Cookie from SGTM cookie |
 
 You can also specify a list of cookie names to be read or an object containing the cookie names (as keys) and cookie values (as values).
 
@@ -79,7 +79,7 @@ form, anchor e string. useFragment.
 
 This is a beta version, while it should work fine for doing a GA4 cross-domain tracking, some features needs to in a future, check next section.
 
-When there are multiple GA4 session cookies, the code reads the last one present in document.cookie string if it wasn't manually passed to the `googleTagLinker` function.
+When there are multiple GA4 session cookies, the code reads the last one present in `document.cookie` string, if it wasn't manually passed to the `googleTagLinker` function as argument.
 
 # To-Do
 
@@ -97,21 +97,22 @@ When there are multiple GA4 session cookies, the code reads the last one present
 $ npm install
 $ npm run build
 ```
+
 # How to use
 
 After loading the script just run the following.
 
-Using Import:
+Using `import`:
 
 ```js
-import googleTagLinker from '@analytics-debugger/google-tag-linker'
+import googleTagLinker from '@analytics-debugger/google-tag-linker';
 const linkerParam  = googleTagLinker("get");
 ```
 
 or loading the IIFE version:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@analytics-debugger/google-tag-linker@latest/dist/googleTagLinker.iife.min.js"><script>
+<script src="https://cdn.jsdelivr.net/npm/@analytics-debugger/google-tag-linker@latest/dist/googleTagLinker.iife.min.js"></script>
 <script>
     const linkerParam  = googleTagLinker("get");
 </script>
