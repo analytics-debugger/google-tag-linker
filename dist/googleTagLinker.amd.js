@@ -15,7 +15,7 @@ define((function () { 'use strict';
 
     /**
      * @function getCookieNameAndValue
-     * @param {string} cookieName - The name of the cookie to search for
+     * @param {string|RegExp} cookieName - The name of the cookie to search for
      * @return {string[]} - An array containing the name of the cookie, and its value.
      * @description - The function searches for the cookie with the name passed as parameter and returns an array with the name of the cookie and its value.  If the cookie is not found, an empty array is returned
      */
@@ -64,8 +64,9 @@ define((function () { 'use strict';
 
     /**
      * @function getLinkerValuesFromUrl
-     * @param {string} linkerQueryParameterName - the parameter name of the linker in the URL
-     * @param {boolean} checkFingerPrint - if the function should check for the fingerprint validation before returning the cookies
+     * @param {object} [settings={}] - the settings object
+     * @param {string} settings.linkerQueryParameterName - the parameter name of the linker in the URL
+     * @param {boolean} settings.checkFingerPrint - if the function should check for the fingerprint validation before returning the cookies
      * @returns {object|undefined} - an object with the cookies values, or undefined if the linker parameter is not found or the fingerprint check failed
      */
     function getLinkerValuesFromUrl() {
@@ -93,8 +94,9 @@ define((function () { 'use strict';
 
     /**
      * @function generateLinkerValuesFromCookies
-     * @param {string[]|object} cookiesNamesList - an array with the cookies names to be passed on the linker, or an object with the cookies names and values
-     * @param {string} gaCookiesPrefix - prefix for the Google Analytics cookies
+     * @param {object} [settings={}] - the settings object
+     * @param {(string|RegExp)[]|object} settings.cookiesNamesList - an array with the cookies names to be passed on the linker, or an object with the cookies names and values
+     * @param {string} settings.gaCookiesPrefix - prefix for the Google Analytics cookies
      * @returns {string[]} - an array containing the linker value for each cookie. Example: ['_ga_THYNGSTER*XXXXXXXXXXXXXXX', '_gcl_aw*AAAAAAAAAAAA', '_gcl_dc*BBBBBBBBBBB', '_gcl_gb*CCCCCCCCCCCC', '_gcl_gf*DDDDDDDDDDD', '_gcl_ha*EEEEEEEEEEEE', '_fplc*MTExMTExMTExMTExMTExMTExMTEx']
      */
     function generateLinkerValuesFromCookies() {
@@ -161,7 +163,7 @@ define((function () { 'use strict';
      * @function decorateFormTagWithLinker
      * @param {string} linkerQueryParameterName - the name of the linker query parameter
      * @param {string} linkerParameter - the linker parameter value
-     * @param {HTMLFormElement} form - the form tag to decorate.
+     * @param {HTMLFormElement} form - the <form> HTML element to decorate
      */
     function decorateFormTagWithLinker(linkerQueryParameter, linkerParameter, formElement) {
       if (formElement && formElement.action) {
@@ -266,8 +268,9 @@ define((function () { 'use strict';
 
     /**
      * @function getLinker
-     * @param {string[]|object} cookiesNamesList - an array with the cookies names to be passed on the linker, or an object with the cookies names and values
-     * @param {string} gaCookiesPrefix - prefix for the Google Analytics cookies
+     * @param {object} [settings={}] - the settings object
+     * @param {(string|RegExp)[]|object} settings.cookiesNamesList - an array with the cookies names to be passed on the linker, or an object with the cookies names and values
+     * @param {string} settings.gaCookiesPrefix - prefix for the Google Analytics cookies
      * @returns {string} - the linker parameter. Example: 1*dm649n*_ga*MTM2MDM4NDg1MS4xNjYxODIxMjQy*_ga_THYNGSTER*XXXXXXXXXXXXXXX*_gcl_aw*AAAAAAAAAAAA*_gcl_dc*BBBBBBBBBBB*_gcl_gb*CCCCCCCCCCCC*_gcl_gf*DDDDDDDDDDD*_gcl_ha*EEEEEEEEEEEE*_fplc*MTExMTExMTExMTExMTExMTExMTEx
      */
     function getLinker() {
@@ -283,8 +286,9 @@ define((function () { 'use strict';
 
     /**
      * @function readLinker
-     * @param {string} linkerQueryParameterName - the parameter name of the linker in the URL
-     * @param {boolean} checkFingerPrint - if the function should check for the fingerprint validation before returning the cookies
+     * @param {object} [settings={}] - the settings object
+     * @param {string} settings.linkerQueryParameterName - the parameter name of the linker in the URL
+     * @param {boolean} settings.checkFingerPrint - if the function should check for the fingerprint validation before returning the cookies
      * @returns {object|undefined} - an object with the cookies values, or undefined if the linker parameter is not found or the fingerprint check failed
      */
     function readLinker() {
@@ -299,11 +303,12 @@ define((function () { 'use strict';
 
     /**
      * @function decorateWithLinker
-     * @param {string} linkerQueryParameterName - the parameter name of the linker in the URL
-     * @param {string[]|object} cookiesNamesList - an array with the cookies names to be passed on the linker, or an object with the cookies names and values
-     * @param {string} gaCookiesPrefix - prefix for the Google Analytics cookies
-     * @param {HTMLAnchorElement|HTMLFormElement|string} entity - the entity (<a>, <form> or an URL) to be decorated
-     * @param {boolean} useFragment - whether to place the linker parameter in the fragment part of the URL or in the query string
+     * @param {object} [settings={}] - the settings object
+     * @param {string} settings.linkerQueryParameterName - the parameter name of the linker in the URL
+     * @param {(string|RegExp)[]|object} settings.cookiesNamesList - an array with the cookies names to be passed on the linker, or an object with the cookies names and values
+     * @param {string} settings.gaCookiesPrefix - prefix for the Google Analytics cookies
+     * @param {HTMLAnchorElement|HTMLFormElement|string} settings.entity - the entity (<a>, <form> or an URL) to be decorated
+     * @param {boolean} settings.useFragment - whether to place the linker parameter in the fragment part of the URL or in the query string
      * @returns {HTMLAnchorElement|HTMLFormElement|string} - the entity (<a>, <form> or an URL) decorated with the linker parameter
     */
     function decorateWithLinker() {
@@ -335,12 +340,14 @@ define((function () { 'use strict';
      *
      * @function
      *
-     * @param {string} action - The action for the function to execute. Available options: "get", "read", "decorate".
-     * @param {string} settings.gaCookiesPrefix - the prefix to use when looking for _ga cookies. Default: "".
-     * @param {string} settings.conversionLinkerCookiesPrefix - the prefix to use when looking for Conversion Linker (Google Ads, Campaign Manager) cookies. Default: "_gcl".
-     * @param {string} settings.linkerQueryParameterName - the query parameter name to use as the linker parameter. Default: "_gl".
-     * @param {boolean} settings.checkFingerPrint - enable or disable checking the fingerprint of the linker parameter. Default: false.
-     * @param {string[]|object} settings.cookiesNamesList - list of cookies names to include in the linker parameter or an object containing the cookies names and values. Default: ["_ga", /^_ga_[A-Z,0-9]/, "FPLC", "_gcl_aw", "_gcl_dc", "_gcl_gb", _"gcl_gf", "_gcl_ha"].
+     * @param {string|undefined} action - The action for the function to execute. Available options: "get", "read", "decorate". Default: "get".
+     * @param {string|undefined} settings.gaCookiesPrefix - the prefix to use when looking for _ga cookies. Default: "".
+     * @param {string|undefined} settings.conversionLinkerCookiesPrefix - the prefix to use when looking for Conversion Linker (Google Ads, Campaign Manager) cookies. Default: "_gcl".
+     * @param {string|undefined} settings.linkerQueryParameterName - the query parameter name to use as the linker parameter. Default: "_gl".
+     * @param {boolean|undefined} settings.checkFingerPrint - enable or disable checking the fingerprint of the linker parameter. Default: false.
+     * @param {HTMLAnchorElement|HTMLFormElement|string} settings.entity - the entity (<a>, <form> or an URL) to be decorated.
+     * @param {boolean|undefined} settings.useFragment - whether to place the linker parameter in the fragment part of the URL or in the query string. Default: false.
+     * @param {(string|RegExp)[]|object|undefined} settings.cookiesNamesList - list of cookies names to include in the linker parameter or an object containing the cookies names and values. Default: ["_ga", /^_ga_[A-Z,0-9]/, "FPLC", "_gcl_aw", "_gcl_dc", "_gcl_gb", _"gcl_gf", "_gcl_ha"].
      * @returns {HTMLAnchorElement|HTMLFormElement|string|undefined} Returns the linker parameter, the values read from the linker parameter, the entities decorated with the linker parameter or undefined.
      */
     var googleTagLinker = function googleTagLinker() {

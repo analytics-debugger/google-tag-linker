@@ -5,12 +5,14 @@ import { getLinker, readLinker, decorateWithLinker } from "./actions.js";
  *
  * @function
  *
- * @param {string} action - The action for the function to execute. Available options: "get", "read", "decorate".
- * @param {string} settings.gaCookiesPrefix - the prefix to use when looking for _ga cookies. Default: "".
- * @param {string} settings.conversionLinkerCookiesPrefix - the prefix to use when looking for Conversion Linker (Google Ads, Campaign Manager) cookies. Default: "_gcl".
- * @param {string} settings.linkerQueryParameterName - the query parameter name to use as the linker parameter. Default: "_gl".
- * @param {boolean} settings.checkFingerPrint - enable or disable checking the fingerprint of the linker parameter. Default: false.
- * @param {string[]|object} settings.cookiesNamesList - list of cookies names to include in the linker parameter or an object containing the cookies names and values. Default: ["_ga", /^_ga_[A-Z,0-9]/, "FPLC", "_gcl_aw", "_gcl_dc", "_gcl_gb", _"gcl_gf", "_gcl_ha"].
+ * @param {string|undefined} action - The action for the function to execute. Available options: "get", "read", "decorate". Default: "get".
+ * @param {string|undefined} settings.gaCookiesPrefix - the prefix to use when looking for _ga cookies. Default: "".
+ * @param {string|undefined} settings.conversionLinkerCookiesPrefix - the prefix to use when looking for Conversion Linker (Google Ads, Campaign Manager) cookies. Default: "_gcl".
+ * @param {string|undefined} settings.linkerQueryParameterName - the query parameter name to use as the linker parameter. Default: "_gl".
+ * @param {boolean|undefined} settings.checkFingerPrint - enable or disable checking the fingerprint of the linker parameter. Default: false.
+ * @param {HTMLAnchorElement|HTMLFormElement|string} settings.entity - the entity (<a>, <form> or an URL) to be decorated.
+ * @param {boolean|undefined} settings.useFragment - whether to place the linker parameter in the fragment part of the URL or in the query string. Default: false.
+ * @param {(string|RegExp)[]|object|undefined} settings.cookiesNamesList - list of cookies names to include in the linker parameter or an object containing the cookies names and values. Default: ["_ga", /^_ga_[A-Z,0-9]/, "FPLC", "_gcl_aw", "_gcl_dc", "_gcl_gb", _"gcl_gf", "_gcl_ha"].
  * @returns {HTMLAnchorElement|HTMLFormElement|string|undefined} Returns the linker parameter, the values read from the linker parameter, the entities decorated with the linker parameter or undefined.
  */
 const googleTagLinker = function (action = "get", settings = {}) {

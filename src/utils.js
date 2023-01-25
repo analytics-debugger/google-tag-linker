@@ -2,7 +2,7 @@ const urlChecker = /^(?:(?:https?|mailto|ftp):|[^:/?#]*(?:[/?#]|$))/i;
 
 /**
  * @function getCookieNameAndValue
- * @param {string} cookieName - The name of the cookie to search for
+ * @param {string|RegExp} cookieName - The name of the cookie to search for
  * @return {string[]} - An array containing the name of the cookie, and its value.
  * @description - The function searches for the cookie with the name passed as parameter and returns an array with the name of the cookie and its value.  If the cookie is not found, an empty array is returned
  */
@@ -54,8 +54,9 @@ function getQueryParameterValue(parameterName) {
 
 /**
  * @function getLinkerValuesFromUrl
- * @param {string} linkerQueryParameterName - the parameter name of the linker in the URL
- * @param {boolean} checkFingerPrint - if the function should check for the fingerprint validation before returning the cookies
+ * @param {object} [settings={}] - the settings object
+ * @param {string} settings.linkerQueryParameterName - the parameter name of the linker in the URL
+ * @param {boolean} settings.checkFingerPrint - if the function should check for the fingerprint validation before returning the cookies
  * @returns {object|undefined} - an object with the cookies values, or undefined if the linker parameter is not found or the fingerprint check failed
  */
 export function getLinkerValuesFromUrl({ linkerQueryParameterName, checkFingerPrint } = {}) {
@@ -83,8 +84,9 @@ export function getLinkerValuesFromUrl({ linkerQueryParameterName, checkFingerPr
 
 /**
  * @function generateLinkerValuesFromCookies
- * @param {string[]|object} cookiesNamesList - an array with the cookies names to be passed on the linker, or an object with the cookies names and values
- * @param {string} gaCookiesPrefix - prefix for the Google Analytics cookies
+ * @param {object} [settings={}] - the settings object
+ * @param {(string|RegExp)[]|object} settings.cookiesNamesList - an array with the cookies names to be passed on the linker, or an object with the cookies names and values
+ * @param {string} settings.gaCookiesPrefix - prefix for the Google Analytics cookies
  * @returns {string[]} - an array containing the linker value for each cookie. Example: ['_ga_THYNGSTER*XXXXXXXXXXXXXXX', '_gcl_aw*AAAAAAAAAAAA', '_gcl_dc*BBBBBBBBBBB', '_gcl_gb*CCCCCCCCCCCC', '_gcl_gf*DDDDDDDDDDD', '_gcl_ha*EEEEEEEEEEEE', '_fplc*MTExMTExMTExMTExMTExMTExMTEx']
  */
 export function generateLinkerValuesFromCookies({ cookiesNamesList, gaCookiesPrefix } = {}) {
@@ -165,7 +167,7 @@ export function decorateAnchorTagWithLinker(
  * @function decorateFormTagWithLinker
  * @param {string} linkerQueryParameterName - the name of the linker query parameter
  * @param {string} linkerParameter - the linker parameter value
- * @param {HTMLFormElement} form - the form tag to decorate.
+ * @param {HTMLFormElement} form - the <form> HTML element to decorate
  */
 export function decorateFormTagWithLinker(linkerQueryParameter, linkerParameter, formElement) {
     if (formElement && formElement.action) {
