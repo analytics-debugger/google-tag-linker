@@ -1,3 +1,18 @@
+# Table of contents
+
+- [Google Tag Linker Brigde](#google-tag-linker-brigde)
+- [How does Google Tag cross-domain work](#how-does-google-tag-cross-domain-work)
+- [Notes](#notes)
+- [To-Do](#to-do)
+- [Build](#build)
+- [How to use](#how-to-use)
+  - [`get` method](#get-method)
+    - [Example](#example)
+  - [`read` method](#read-method)
+    - [Example](#example)
+  - [`decorate` method](#decorate-method)
+    - [Example](#example)
+
 # Google Tag Linker Brigde
 
 Hola! Olá! This is a **JavaScript** library that provided the needed functionality for creating a `linkerParam` for Google Analytics 4 (**_`Google Tag`_** , **_`GTAG`_**). I started this work back in 2019 when I first saw the new `_gl` parameter.
