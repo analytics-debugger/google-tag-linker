@@ -6,12 +6,17 @@
 - [To-Do](#to-do)
 - [Build](#build)
 - [How to use](#how-to-use)
-  - [`get` method](#get-method)
-    - [Example](#example)
-  - [`read` method](#read-method)
-    - [Example](#example)
-  - [`decorate` method](#decorate-method)
-    - [Example](#example)
+  * [Installation](#installation)
+    + [Using `import`](#using-import)
+    + [Loading a bundle files of `dist` folder via CDN](#loading-a-bundle-files-of-dist-folder-via-cdn)
+    + [Self-hosting one of the bundle files of `dist` folder](#self-hosting-one-of-the-bundle-files-of-dist-folder)
+  * [`get` method](#get-method)
+    + [Example](#example)
+  * [`read` method](#read-method)
+    + [Example](#example-1)
+  * [`decorate` method](#decorate-method)
+    + [Example](#example-2)
+
 
 # Google Tag Linker Brigde
 
@@ -86,16 +91,19 @@ $ npm run build
 
 # How to use
 
-After loading the script just run the following.
+## Installation
 
-Using `import`
+There are 3 options to run the script.
+
+### Using `import`
 
 ```js
 import googleTagLinker from '@analytics-debugger/google-tag-linker';
 const linkerParam  = googleTagLinker("get");
 ```
 
-or loading the IIFE version (or your preferred version - check the `dist` folder) via a CDN
+### Loading a bundle files of `dist` folder via CDN
+Choose your preferred version inside the `dist` folder.
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/@analytics-debugger/google-tag-linker@latest/dist/googleTagLinker.iife.min.js"></script>
@@ -104,8 +112,10 @@ or loading the IIFE version (or your preferred version - check the `dist` folder
 </script>
 ```
 
-or self-hosting one of the compiled files inside the `dist` folder **(you will not receive updates)** - this is a viable aproach if you use GTM.
+### Self-hosting one of the bundle files of `dist` folder
+Keep in mind that **you will not receive updates**. This is a viable aproach if you use GTM.
 If installing via GTM, choose the `googleTagLinker.iife.min.js` version.
+
 ```html
 <!--
 Inside a Custom HTML tag in GTM, add the your preferred minified version
